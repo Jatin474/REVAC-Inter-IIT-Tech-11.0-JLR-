@@ -1,0 +1,457 @@
+
+xfff=8.5;yfff=-5;zfff=11;
+a=0.25;b=0.69;c=0.125; %roll; pitch; yaw; what format are we using?
+L1=8.5;L2=7.63; L3=7.12; L4=2.43; L5=1.368; L6=0;
+
+%TESTING
+%{
+Tf=rpy(a,b,c,xf,yf,zf);
+thetas=sol6dof(Tf,L1,L2,L3,L4,L5,L6);
+t1=thetas{1};
+t2=thetas{2};
+t3=thetas{3};
+t4=thetas{4};
+t5=thetas{5};
+t6=thetas{6};
+t234=t2+t3+t4;
+xcal=cos(t1)*(cos(t234)*L4+cos(t2+t3)*L3+cos(t2)*L2);
+ycal=sin(t1)*(cos(t234)*L4+cos(t2+t3)*L3+cos(t2)*L2);
+zcal=sin(t234)*L4+sin(t2+t3)*L3+sin(t2)*L2;
+%}
+
+ra=zeros(3,7);%CHECK
+ra(:,1)=[0,0,0];%CHECK
+
+xi=0; yi=0; zi=8.5;%INITIAL POSITION-CHANGE
+
+%PATH PLANNING
+%{
+%xf yf zf we give here are at an offset to final position, follow straight
+%line from initial to intermediate position.
+offset=1; %hardcoded value/some function may be made here
+values=transform([xf;yf;zf],[offset;0;0],a,b,c);
+xff=values(1,1);yff=values(2,1);zff=values(3,1);
+v1=[xi,yi,zi]; %test trajectory
+v2=[xff,yff,zff]; %decided at an offset to our point
+v3=[xff,yff,zff]; %test trajectory
+v4=[xf,yf,zf];
+v=[v2;v1];
+vo=[v4;v3];
+%%{
+Ldum=1;
+for t=xi:0.1:xff
+    xt=t;yt=yi+((yff-yi)/(xff-xi))*(t-xi);zt=zi+((zff-zi)/(xff-xi))*(t-xi);
+    Tf=rpy(a,b,c,xt,yt,zt);
+    thetas=sol6dof(Tf,L1,L2,L3,L4,L5,L6);
+    t1=thetas{1};
+    t2=thetas{2};
+    t3=thetas{3};
+    t4=thetas{4};
+    t5=thetas{5};
+    t6=thetas{6};
+    T1=[cos(t1) 0 sin(t1) 0; sin(t1) 0 -cos(t1) 0; 0 1 0 0; 0 0 0 1];
+    T2=[cos(t2) -sin(t2) 0 cos(t2)*L2; sin(t2) cos(t2) 0 sin(t2)*L2; 0 0 1 0; 0 0 0 1];
+    T3=[cos(t3) -sin(t3) 0 cos(t3)*L3; sin(t3) cos(t3) 0 sin(t3)*L3; 0 0 1 0; 0 0 0 1];
+    T4=[cos(t4) 0 -sin(t4) cos(t4)*L4; sin(t4) 0 cos(t4) sin(t4)*L4; 0 -1 0 0; 0 0 0 1];
+    T5=[cos(t5) 0 sin(t5) 0; sin(t5) 0 -cos(t5) 0; 0 1 0 0; 0 0 0 1];
+    T6=[cos(t6) -sin(t6) 0 cos(t6)*Ldum; sin(t6) cos(t6) 0 sin(t6)*Ldum; 0 0 1 0; 0 0 0 1];
+    T2m=T1*T2; T3m=T1*T2*T3; T4m=T1*T2*T3*T4; T5m=T1*T2*T3*T4*T5; T6m=T1*T2*T3*T4*T5*T6;
+    %there is no height to model currently
+    ra(:,2)=T1(1:3,4);
+    ra(:,3)=T2m(1:3,4);
+    ra(:,4)=T3m(1:3,4);
+    ra(:,5)=T4m(1:3,4);
+    ra(:,6)=T5m(1:3,4);
+    ra(:,7)=T6m(1:3,4);
+    plotpath(ra,v,vo);
+    pause(0.1);
+end
+%%}
+
+%follow line at given orientation from intermediate to final position.
+%{
+
+for t=xff:0.1:xf
+    xt=t;yt=yff+((yf-yff)/(xf-xff))*(t-xff);zt=zff+((zf-zff)/(xf-xff))*(t-xff);
+    %xt=9;yt=5;zt=7;
+    Tf=rpy(a,b,c,xt,yt,zt);
+    thetas=sol6dof(Tf,L1,L2,L3,L4,L5,L6);
+    t1=thetas{1};
+    t2=thetas{2};
+    t3=thetas{3};
+    t4=thetas{4};
+    t5=thetas{5};
+    t6=thetas{6};
+    T1=[cos(t1) 0 sin(t1) 0; sin(t1) 0 -cos(t1) 0; 0 1 0 0; 0 0 0 1];
+    T2=[cos(t2) -sin(t2) 0 cos(t2)*L2; sin(t2) cos(t2) 0 sin(t2)*L2; 0 0 1 0; 0 0 0 1];
+    T3=[cos(t3) -sin(t3) 0 cos(t3)*L3; sin(t3) cos(t3) 0 sin(t3)*L3; 0 0 1 0; 0 0 0 1];
+    T4=[cos(t4) 0 -sin(t4) cos(t4)*L4; sin(t4) 0 cos(t4) sin(t4)*L4; 0 -1 0 0; 0 0 0 1];
+    T5=[cos(t5) 0 sin(t5) 0; sin(t5) 0 -cos(t5) 0; 0 1 0 0; 0 0 0 1];
+    T6=[cos(t6) -sin(t6) 0 cos(t6)*Ldum; sin(t6) cos(t6) 0 sin(t6)*Ldum; 0 0 1 0; 0 0 0 1];
+    T2m=T1*T2; T3m=T1*T2*T3; T4m=T1*T2*T3*T4; T5m=T1*T2*T3*T4*T5; T6m=T1*T2*T3*T4*T5*T6;
+    %there is no height to model currently
+    %yahan kuch hai
+    ra(:,2)=T1(1:3,4);
+    ra(:,3)=T2m(1:3,4);
+    ra(:,4)=T3m(1:3,4);
+    ra(:,5)=T4m(1:3,4);
+    ra(:,6)=T5m(1:3,4);
+    ra(:,7)=T6m(1:3,4);
+    plotpath(ra,v,vo);
+    pause(0.1);
+end
+%}
+%}
+
+%TRAJECTORY PLANNING
+%{
+i=1;
+num=round((xf-xi)/0.1);
+wpts=zeros(3,num);
+%vbc=zeros(3,num);
+offset=1; %hardcoded value/some function may be made here
+values=transform([xf;yf;zf],[0;0;offset],a,b,c);
+xff=values(1,1);yff=values(2,1);zff=values(3,1);
+for t=xi:0.1:xff
+    xt=t;yt=(yff/(xff-xi))*(t-xi);zt=zi+((zff-zi)/(xff-xi))*(t-xi);%ERRORRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+    wpts(:,i)=[xt;yt;zt];
+    %vbc(:,i)=[0.1/sqrt(3);0.1/sqrt(3);0.1/sqrt(3)];
+    i=i+1;
+end
+for t=xff:0.1:xf
+    xt=t;yt=(yf/(xf-xff))*(t-xff);zt=zff+((zf-zff)/(xf-xff))*(t-xff);%ERRORRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+    wpts(:,i)=[xt;yt;zt];
+    i=i+1;
+end
+time=120; %in seconds
+%tvec = 0:1:time; %start time : steps : end time (END TIME ACCORDING TO MAX VELOCITY AND BASED ON BOUNDING BOX)
+%tpts = 0:num; % number of wpts 
+[q,qd,qdd,tvec,pp] = trapveltraj(wpts,250,PeakVelocity=0.1);
+%%{
+%[q,qd,qdd,qddd,pp] = quinticpolytraj(wpts,tpts,tvec,VelocityBoundaryCondition=vbc);
+subplot(3,1,1)
+plot(tvec, q)
+xlabel('t')
+ylabel('Positions')
+legend('X','Y','Z')
+subplot(3,1,2)
+plot(tvec, qd)
+xlabel('t')
+ylabel('Velocities')
+legend('X','Y','Z')
+subplot(3,1,3)
+plot(tvec, qdd)
+xlabel('t')
+ylabel('Acceleration')
+legend('X','Y','Z')
+%}
+
+%TRAJECTORY PLANNING 2
+Ldum=0;
+t1i=0;t2i=0.717;t3i=0.643;t4i=1.025;t5i=0;t6i=0;
+Tnot=65;%should be a function hardcoded##################################################################################
+offset=1; %hardcoded value/some function may be made here
+values2=transform([xfff;yfff;zfff],[L5;0;0],a,b,c);
+xf=values2(1,1);
+yf=values2(2,1);
+zf=values2(3,1);
+Tf=rpy(0.79,0.79,0.79,xff,yff,zff);
+
+
+values=transform([xf;yf;zf],[offset;0;0],a,b,c);
+xff=values(1,1);yff=values(2,1);zff=values(3,1);
+v1=[xff,yff,zff+8.5]; %test trajectory
+v2=[xf,yf,zf+8.5];
+vo=[v2;v1];
+Tf=rpy(0.79,0.79,0.79,xff,yff,zff);%CHANGE MADE HERE ####################################################################
+thetas=sol6dof(Tf,L1,L2,L3,L4,L5,L6);
+t1=thetas{1};t2=thetas{2};t3=thetas{3};t4=thetas{4};t5=thetas{5};t6=thetas{6};
+o1=t1i;o2=t2i;o3=t3i;o4=t4i;o5=t5i;o6=t6i;
+num=Tnot/0.1;
+omega=zeros(6,num);
+iter=1;
+xfinal=[];
+yfinal=[];
+zfinal=[];
+%%{
+for t=0:0.1:Tnot
+    tt1=t1i+(t1-t1i)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    tt2=t2i+(t2-t2i)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    tt3=t3i+(t3-t3i)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    tt4=t4i+(t4-t4i)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    tt5=t5i+(t5-t5i)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    tt6=t6i+(t6-t6i)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    omega(1,iter)=((tt1-o1)/0.1)*(180/pi);
+    omega(2,iter)=((tt2-o2)/0.1)*(180/pi);
+    omega(3,iter)=((tt3-o3)/0.1)*(180/pi);
+    omega(4,iter)=((tt4-o4)/0.1)*(180/pi);
+    omega(5,iter)=((tt5-o5)/0.1)*(180/pi);
+    omega(6,iter)=((tt6-o6)/0.1)*(180/pi);
+    T1=[cos(tt1) 0 sin(tt1) 0; sin(tt1) 0 -cos(tt1) 0; 0 1 0 0; 0 0 0 1];
+    T2=[cos(tt2) -sin(tt2) 0 cos(tt2)*L2; sin(tt2) cos(tt2) 0 sin(tt2)*L2; 0 0 1 0; 0 0 0 1];
+    T3=[cos(tt3) -sin(tt3) 0 cos(tt3)*L3; sin(tt3) cos(tt3) 0 sin(tt3)*L3; 0 0 1 0; 0 0 0 1];
+    T4=[cos(tt4) 0 -sin(tt4) cos(tt4)*L4; sin(tt4) 0 cos(tt4) sin(tt4)*L4; 0 -1 0 0; 0 0 0 1];
+    T5=[cos(tt5) 0 sin(tt5) 0; sin(tt5) 0 -cos(tt5) 0; 0 1 0 0; 0 0 0 1];
+    T6=[cos(tt6) -sin(tt6) 0 cos(tt6)*Ldum; sin(tt6) cos(tt6) 0 sin(tt6)*Ldum; 0 0 1 0; 0 0 0 1];
+    T2m=T1*T2; T3m=T1*T2*T3; T4m=T1*T2*T3*T4; T5m=T1*T2*T3*T4*T5; T6m=T1*T2*T3*T4*T5*T6;
+    %there is no height to model currently
+    ra(:,2)=T1(1:3,4); ra(3,2)=ra(3,2)+8.5;
+    ra(:,3)=T2m(1:3,4); ra(3,3)=ra(3,3)+8.5;
+    ra(:,4)=T3m(1:3,4); ra(3,4)=ra(3,4)+8.5;
+    ra(:,5)=T4m(1:3,4); ra(3,5)=ra(3,5)+8.5;
+    ra(:,6)=T5m(1:3,4); ra(3,6)=ra(3,6)+8.5;
+    ra(:,7)=T6m(1:3,4); ra(3,7)=ra(3,7)+8.5;
+    t234=tt2+tt3+tt4;
+    xcal=cos(tt1)*(cos(t234)*L4+cos(tt2+tt3)*L3+cos(tt2)*L2);
+    ycal=sin(tt1)*(cos(t234)*L4+cos(tt2+tt3)*L3+cos(tt2)*L2);
+    zcal=sin(t234)*L4+sin(tt2+t3)*L3+sin(tt2)*L2;
+    xfinal(end+1)=xcal;
+    yfinal(end+1)=ycal;
+    zfinal(end+1)=zcal;
+    plotpath(ra,vo,xfinal,yfinal,zfinal);
+    o1=tt1;o2=tt2;o3=tt3;o4=tt4;o5=tt5;o6=tt6;
+    iter=iter+1;
+    pause(0.01);
+end
+%}
+%{
+time=0:0.1:Tnot;
+
+plot(time,t1i+(t1-t1i)*(6*((time/Tnot).^5)-15*((time/Tnot).^4)+10*((time/Tnot).^3)),'r');
+hold on
+plot(time,t2i+(t2-t2i)*(6*((time/Tnot).^5)-15*((time/Tnot).^4)+10*((time/Tnot).^3)),'y');
+hold on
+plot(time,t3i+(t3-t3i)*(6*((time/Tnot).^5)-15*((time/Tnot).^4)+10*((time/Tnot).^3)),'b');
+hold on
+plot(time,t4i+(t4-t4i)*(6*((time/Tnot).^5)-15*((time/Tnot).^4)+10*((time/Tnot).^3)),'g');
+hold on
+plot(time,t5i+(t5-t5i)*(6*((time/Tnot).^5)-15*((time/Tnot).^4)+10*((time/Tnot).^3)),'k');
+hold on
+plot(time,t6i+(t6-t6i)*(6*((time/Tnot).^5)-15*((time/Tnot).^4)+10*((time/Tnot).^3)));
+xlabel('Time')
+ylabel('Joint Angle')
+legend('J1','J2','J3','J4','J5','J6')
+%}
+%{
+subplot(2,1,1)
+plot(time,omega(1,:),'r');
+hold on
+plot(time,omega(2,:),'y');
+hold on
+plot(time,omega(3,:),'b');
+hold on
+plot(time,omega(4,:),'g');
+hold on
+plot(time,omega(5,:),'k');
+hold on
+plot(time,omega(6,:));
+xlabel('Time')
+ylabel('Angular Velocity')
+legend('J1','J2','J3','J4','J5','J6')
+%}
+%{
+subplot(3,1,3)//WRONG
+plot(time,t4i+(t4-t4i)*(120*((time).^3)/(Tnot^5))-180*((time).^2)/(Tnot^4)+60*(time/Tnot));
+xlabel('Time')
+ylabel('Angular Acceleration')
+%CHANGING POSE
+%}
+
+Tf=rpy(a,b,c,xff,yff,zff);%CHANGE MADE HERE ####################################################################
+thetas=sol6dof(Tf,L1,L2,L3,L4,L5,L6);
+t12=thetas{1};t22=thetas{2};t32=thetas{3};t42=thetas{4};t52=thetas{5};t62=thetas{6};
+Tnot=5;
+for t=0:0.1:Tnot
+    tt1=t1+(t12-t1)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    tt2=t2+(t22-t2)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    tt3=t3+(t32-t3)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    tt4=t4+(t42-t4)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    tt5=t5+(t52-t5)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    tt6=t6+(t62-t6)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    T1=[cos(tt1) 0 sin(tt1) 0; sin(tt1) 0 -cos(tt1) 0; 0 1 0 0; 0 0 0 1];
+    T2=[cos(tt2) -sin(tt2) 0 cos(tt2)*L2; sin(tt2) cos(tt2) 0 sin(tt2)*L2; 0 0 1 0; 0 0 0 1];
+    T3=[cos(tt3) -sin(tt3) 0 cos(tt3)*L3; sin(tt3) cos(tt3) 0 sin(tt3)*L3; 0 0 1 0; 0 0 0 1];
+    T4=[cos(tt4) 0 -sin(tt4) cos(tt4)*L4; sin(tt4) 0 cos(tt4) sin(tt4)*L4; 0 -1 0 0; 0 0 0 1];
+    T5=[cos(tt5) 0 sin(tt5) 0; sin(tt5) 0 -cos(tt5) 0; 0 1 0 0; 0 0 0 1];
+    T6=[cos(tt6) -sin(tt6) 0 cos(tt6)*Ldum; sin(tt6) cos(tt6) 0 sin(tt6)*Ldum; 0 0 1 0; 0 0 0 1];
+    T2m=T1*T2; T3m=T1*T2*T3; T4m=T1*T2*T3*T4; T5m=T1*T2*T3*T4*T5; T6m=T1*T2*T3*T4*T5*T6;
+    %there is no height to model currently
+    ra(:,2)=T1(1:3,4); ra(3,2)=ra(3,2)+8.5;
+    ra(:,3)=T2m(1:3,4); ra(3,3)=ra(3,3)+8.5;
+    ra(:,4)=T3m(1:3,4); ra(3,4)=ra(3,4)+8.5;
+    ra(:,5)=T4m(1:3,4); ra(3,5)=ra(3,5)+8.5;
+    ra(:,6)=T5m(1:3,4); ra(3,6)=ra(3,6)+8.5;
+    ra(:,7)=T6m(1:3,4); ra(3,7)=ra(3,7)+8.5;
+    t234=tt2+tt3+tt4;
+    xcal=cos(tt1)*(cos(t234)*L4+cos(tt2+tt3)*L3+cos(tt2)*L2);
+    ycal=sin(tt1)*(cos(t234)*L4+cos(tt2+tt3)*L3+cos(tt2)*L2);
+    zcal=sin(t234)*L4+sin(tt2+t3)*L3+sin(tt2)*L2;
+    xfinal(end+1)=xcal;
+    yfinal(end+1)=ycal;
+    zfinal(end+1)=zcal;
+    plotpath(ra,vo,xfinal,yfinal,zfinal);
+    iter=iter+1;
+    pause(0.01);
+end
+
+%JUST FOR VIEWING WHICH IS WHY THE CONCEPT OF T IS INCORRECT
+for t=xff:0.1:xf
+    xt=t;yt=yff+((yf-yff)/(xf-xff))*(t-xff);zt=zff+((zf-zff)/(xf-xff))*(t-xff);
+    %xt=9;yt=5;zt=7;
+    Tf=rpy(a,b,c,xt,yt,zt);
+    thetas=sol6dof(Tf,L1,L2,L3,L4,L5,L6);
+    t1=thetas{1};
+    t2=thetas{2};
+    t3=thetas{3};
+    t4=thetas{4};
+    t5=thetas{5};
+    t6=thetas{6};
+    T1=[cos(t1) 0 sin(t1) 0; sin(t1) 0 -cos(t1) 0; 0 1 0 0; 0 0 0 1];
+    T2=[cos(t2) -sin(t2) 0 cos(t2)*L2; sin(t2) cos(t2) 0 sin(t2)*L2; 0 0 1 0; 0 0 0 1];
+    T3=[cos(t3) -sin(t3) 0 cos(t3)*L3; sin(t3) cos(t3) 0 sin(t3)*L3; 0 0 1 0; 0 0 0 1];
+    T4=[cos(t4) 0 -sin(t4) cos(t4)*L4; sin(t4) 0 cos(t4) sin(t4)*L4; 0 -1 0 0; 0 0 0 1];
+    T5=[cos(t5) 0 sin(t5) 0; sin(t5) 0 -cos(t5) 0; 0 1 0 0; 0 0 0 1];
+    T6=[cos(t6) -sin(t6) 0 cos(t6)*Ldum; sin(t6) cos(t6) 0 sin(t6)*Ldum; 0 0 1 0; 0 0 0 1];
+    T2m=T1*T2; T3m=T1*T2*T3; T4m=T1*T2*T3*T4; T5m=T1*T2*T3*T4*T5; T6m=T1*T2*T3*T4*T5*T6;
+    %there is no height to model currently
+    ra(:,2)=T1(1:3,4); ra(3,2)=ra(3,2)+8.5;
+    ra(:,3)=T2m(1:3,4); ra(3,3)=ra(3,3)+8.5;
+    ra(:,4)=T3m(1:3,4); ra(3,4)=ra(3,4)+8.5;
+    ra(:,5)=T4m(1:3,4); ra(3,5)=ra(3,5)+8.5;
+    ra(:,6)=T5m(1:3,4); ra(3,6)=ra(3,6)+8.5;
+    ra(:,7)=T6m(1:3,4); ra(3,7)=ra(3,7)+8.5;
+    t234=tt2+tt3+tt4;
+    xcal=cos(tt1)*(cos(t234)*L4+cos(tt2+tt3)*L3+cos(tt2)*L2);
+    ycal=sin(tt1)*(cos(t234)*L4+cos(tt2+tt3)*L3+cos(tt2)*L2);
+    zcal=sin(t234)*L4+sin(tt2+t3)*L3+sin(tt2)*L2;
+    xfinal(end+1)=xcal;
+    yfinal(end+1)=ycal;
+    zfinal(end+1)=zcal;
+    plotpath(ra,vo,xfinal,yfinal,zfinal);
+    pause(0.1);
+end
+
+
+%for second part use trapezoidal
+num=round((xf-xi)/0.1);
+wpts=[xff,(xff+xf)/2,xf; yff,(yff+yf)/2,yf; zff,(zff+zf)/2,zf];
+[q,qd,qdd,tvec,pp] = trapveltraj(wpts,100,PeakVelocity=0.1);
+
+omegas2=zeros(6,100);
+thetainits={0,0,0,0,0,0};
+for i=1:1:99 %99 is 100-1 no of data points
+    Tf=rpy(a,b,c,q(1,i),q(2,i),q(3,i));
+    thetas=sol6dof(Tf,L1,L2,L3,L4,L5,L6);
+    omegas2(1,i)=(thetas{1}-thetainits{1})/(tvec(1,i+1)-tvec(1,i))*180/pi;
+    omegas2(2,i)=(thetas{2}-thetainits{2})/(tvec(1,i+1)-tvec(1,i))*180/pi;
+    omegas2(3,i)=(thetas{3}-thetainits{3})/(tvec(1,i+1)-tvec(1,i))*180/pi;
+    omegas2(4,i)=(thetas{4}-thetainits{4})/(tvec(1,i+1)-tvec(1,i))*180/pi;
+    omegas2(5,i)=(thetas{5}-thetainits{5})/(tvec(1,i+1)-tvec(1,i))*180/pi;
+    omegas2(6,i)=(thetas{6}-thetainits{6})/(tvec(1,i+1)-tvec(1,i))*180/pi;
+    thetainits=thetas;
+end
+
+
+%JUST FOR VIEWING WHICH IS WHY THE CONCEPT OF T IS INCORRECT
+
+for t=xf:-0.1:xff
+    xt=t;yt=yff+((yf-yff)/(xf-xff))*(t-xff);zt=zff+((zf-zff)/(xf-xff))*(t-xff);
+    %xt=9;yt=5;zt=7;
+    Tf=rpy(a,b,c,xt,yt,zt);
+    thetas=sol6dof(Tf,L1,L2,L3,L4,L5,L6);
+    t1=thetas{1};
+    t2=thetas{2};
+    t3=thetas{3};
+    t4=thetas{4};
+    t5=thetas{5};
+    t6=thetas{6};
+    T1=[cos(t1) 0 sin(t1) 0; sin(t1) 0 -cos(t1) 0; 0 1 0 0; 0 0 0 1];
+    T2=[cos(t2) -sin(t2) 0 cos(t2)*L2; sin(t2) cos(t2) 0 sin(t2)*L2; 0 0 1 0; 0 0 0 1];
+    T3=[cos(t3) -sin(t3) 0 cos(t3)*L3; sin(t3) cos(t3) 0 sin(t3)*L3; 0 0 1 0; 0 0 0 1];
+    T4=[cos(t4) 0 -sin(t4) cos(t4)*L4; sin(t4) 0 cos(t4) sin(t4)*L4; 0 -1 0 0; 0 0 0 1];
+    T5=[cos(t5) 0 sin(t5) 0; sin(t5) 0 -cos(t5) 0; 0 1 0 0; 0 0 0 1];
+    T6=[cos(t6) -sin(t6) 0 cos(t6)*Ldum; sin(t6) cos(t6) 0 sin(t6)*Ldum; 0 0 1 0; 0 0 0 1];
+    T2m=T1*T2; T3m=T1*T2*T3; T4m=T1*T2*T3*T4; T5m=T1*T2*T3*T4*T5; T6m=T1*T2*T3*T4*T5*T6;
+    %there is no height to model currently
+    %yahan kuch hai
+    ra(:,2)=T1(1:3,4); ra(3,2)=ra(3,2)+8.5;
+    ra(:,3)=T2m(1:3,4); ra(3,3)=ra(3,3)+8.5;
+    ra(:,4)=T3m(1:3,4); ra(3,4)=ra(3,4)+8.5;
+    ra(:,5)=T4m(1:3,4); ra(3,5)=ra(3,5)+8.5;
+    ra(:,6)=T5m(1:3,4); ra(3,6)=ra(3,6)+8.5;
+    ra(:,7)=T6m(1:3,4); ra(3,7)=ra(3,7)+8.5;
+    t234=tt2+tt3+tt4;
+    xcal=cos(tt1)*(cos(t234)*L4+cos(tt2+tt3)*L3+cos(tt2)*L2);
+    ycal=sin(tt1)*(cos(t234)*L4+cos(tt2+tt3)*L3+cos(tt2)*L2);
+    zcal=sin(t234)*L4+sin(tt2+t3)*L3+sin(tt2)*L2;
+    xfinal(end+1)=xcal;
+    yfinal(end+1)=ycal;
+    zfinal(end+1)=zcal;
+    plotpath(ra,vo,xfinal,yfinal,zfinal);
+    pause(0.1);
+end
+
+%BACKWALK
+for t=0:0.1:Tnot
+    tt1=t1-(t1-t1i)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    tt2=t2-(t2-t2i)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    tt3=t3-(t3-t3i)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    tt4=t4-(t4-t4i)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    tt5=t5-(t5-t5i)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    tt6=t6-(t6-t6i)*(6*((t/Tnot)^5)-15*((t/Tnot)^4)+10*((t/Tnot)^3));
+    omega(1,iter)=((tt1-o1)/0.1)*(180/pi);
+    omega(2,iter)=((tt2-o2)/0.1)*(180/pi);
+    omega(3,iter)=((tt3-o3)/0.1)*(180/pi);
+    omega(4,iter)=((tt4-o4)/0.1)*(180/pi);
+    omega(5,iter)=((tt5-o5)/0.1)*(180/pi);
+    omega(6,iter)=((tt6-o6)/0.1)*(180/pi);
+    T1=[cos(tt1) 0 sin(tt1) 0; sin(tt1) 0 -cos(tt1) 0; 0 1 0 0; 0 0 0 1];
+    T2=[cos(tt2) -sin(tt2) 0 cos(tt2)*L2; sin(tt2) cos(tt2) 0 sin(tt2)*L2; 0 0 1 0; 0 0 0 1];
+    T3=[cos(tt3) -sin(tt3) 0 cos(tt3)*L3; sin(tt3) cos(tt3) 0 sin(tt3)*L3; 0 0 1 0; 0 0 0 1];
+    T4=[cos(tt4) 0 -sin(tt4) cos(tt4)*L4; sin(tt4) 0 cos(tt4) sin(tt4)*L4; 0 -1 0 0; 0 0 0 1];
+    T5=[cos(tt5) 0 sin(tt5) 0; sin(tt5) 0 -cos(tt5) 0; 0 1 0 0; 0 0 0 1];
+    T6=[cos(tt6) -sin(tt6) 0 cos(tt6)*Ldum; sin(tt6) cos(tt6) 0 sin(tt6)*Ldum; 0 0 1 0; 0 0 0 1];
+    T2m=T1*T2; T3m=T1*T2*T3; T4m=T1*T2*T3*T4; T5m=T1*T2*T3*T4*T5; T6m=T1*T2*T3*T4*T5*T6;
+    %there is no height to model currently
+    ra(:,2)=T1(1:3,4); ra(3,2)=ra(3,2)+8.5;
+    ra(:,3)=T2m(1:3,4); ra(3,3)=ra(3,3)+8.5;
+    ra(:,4)=T3m(1:3,4); ra(3,4)=ra(3,4)+8.5;
+    ra(:,5)=T4m(1:3,4); ra(3,5)=ra(3,5)+8.5;
+    ra(:,6)=T5m(1:3,4); ra(3,6)=ra(3,6)+8.5;
+    ra(:,7)=T6m(1:3,4); ra(3,7)=ra(3,7)+8.5;
+    t234=tt2+tt3+tt4;
+    xcal=cos(tt1)*(cos(t234)*L4+cos(tt2+tt3)*L3+cos(tt2)*L2);
+    ycal=sin(tt1)*(cos(t234)*L4+cos(tt2+tt3)*L3+cos(tt2)*L2);
+    zcal=sin(t234)*L4+sin(tt2+t3)*L3+sin(tt2)*L2;
+    xfinal(end+1)=xcal;
+    yfinal(end+1)=ycal;
+    zfinal(end+1)=zcal;
+    plotpath(ra,vo,xfinal,yfinal,zfinal);
+    o1=tt1;o2=tt2;o3=tt3;o4=tt4;o5=tt5;o6=tt6;
+    iter=iter+1;
+    pause(0.1);
+end
+
+%{
+subplot(2,1,1)
+plot(tvec, q)
+xlabel('t')
+ylabel('Positions')
+legend('X','Y','Z')
+subplot(2,1,2)
+plot(tvec, qd)
+xlabel('Time')
+ylabel('Velocities')
+legend('X','Y','Z')
+%}
+%}
+%{
+subplot(3,1,3)
+plot(tvec, qdd)
+xlabel('t')
+ylabel('Acceleration')
+legend('X','Y','Z')
+%}
+%thetas waali cheez jisme 3 constant rakhenge
+%}
+

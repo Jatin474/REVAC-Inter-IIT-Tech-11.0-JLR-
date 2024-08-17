@@ -1,0 +1,15 @@
+%multiple solutions have to be taken care of
+function[thetas] = solutions(x,y,z,L1,L2,L3)
+    t1=atan2(y,x);
+    c3=(x^2+y^2+z^2-(L1^2+L2^2+L3^2)-2*L1*(z-L1))/(2*L2*L3);
+    %s3=sqrt(1-c3^2);
+    t3=acos(c3);
+    %a=atan2(z-L1,sqrt(x^2+y^2));
+    %b=acos((L1^2+L2^2-L3^2-2*z*L1+x^2+y^2+z^2)/(2*L2*sqrt(x^2+y^2+z^2+L1^2-2*z*L1)));%isme chod hai
+    %t2=a-b;
+    k1=cos(t3)*L3+L2;
+    k2=sin(t3)*L3;
+    A=-2*k1*(L1-z);
+    B=(2*k1*(L1-z))^2-4*(k1^2+k)
+    thetas={t1,t2,t3,b};
+end

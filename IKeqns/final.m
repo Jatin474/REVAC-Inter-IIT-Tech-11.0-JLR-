@@ -1,0 +1,51 @@
+% ----------------------------------------- to find angles --------------%
+
+%program to find initial 3 angles- ik_eqn.m
+
+%program to find angles of last 2 joints
+syms theta4 theta5 l4 l5 a1 a2 a3 b1 b2 b3 c1 c2 c3 P1 P2 P3 a_1 a_2 a_3 b_1 b_2 b_3 c_1 c_2 c_3 P_1 P_2 P_3;
+
+Ti=[a1 b1 c1  P1;
+    a2 b2 c2  P2;
+    a3 b3 0  P3;
+    0  0  0   1];
+
+Tf=[a_1 b_1 c_1  P_1;
+    a_2 b_2 c_2  P_2;
+    a_3 b_3 c_3  P_3;
+    0  0  0   1];
+
+T4 = [cos(theta4) 0 -sin(theta4)  l4*cos(theta4);
+      sin(theta4) 0 cos(theta4)   l4*sin(theta4);
+      0           -1        0     0;
+      0           0        0     1];
+
+T5 = [cos(theta5) 0 sin(theta5)  l5*cos(theta5);
+      sin(theta5) 0 -cos(theta5) l5*sin(theta5);
+      0           1        0     0;
+      0           0        0     1];
+
+Tmult=Ti*T4*T5;
+
+
+eqn=[Tmult(1,4)==Tf(1,4),Tmult(3,4)==Tf(3,4)];
+var=[theta4,theta5];
+sol4=solve(eqn,var,"ReturnConditions",true,"Real",true);
+%sol4.theta4(1,1) or (2,1)   -- value of theta4
+theta4=sol4.theta4(1,1);
+theta5=sol4.theta5(2,1); %or (2,1)   -- value of theta5
+
+
+% ----------------------- to find translation matrix of intermediate positions of 3rd joint ---------------------------------------------%
+
+syms delx;
+
+T_del=[1 0 0  delx;
+       0 1 0  0;
+       0 1 0  0;
+       0 0 0  1];
+
+T_int=Tf*T_del;
+
+% ----------------------- to find translation matrix of intermediate positions of 3rd joint ---------------------------------------------%
+

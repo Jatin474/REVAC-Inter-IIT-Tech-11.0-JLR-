@@ -1,0 +1,8 @@
+%function[matrix] = rpy(a,b,c,xf,yf,zf)
+    %depressing matrix ahead
+    %try plotting line along normal to confirm matrix
+    xf=5;yf=6;zf=5;
+    a=0.785398;b=0.785398;c=0.785398;
+    matrix=[cos(a)*cos(b) cos(a)*sin(b)*sin(c)-sin(a)*cos(c) cos(a)*sin(b)*cos(c)+sin(a)*sin(c) xf; sin(a)*cos(b) sin(a)*sin(b)*sin(c)+cos(a)*cos(c) sin(a)*sin(b)*cos(c)-cos(a)*sin(c) yf; -sin(b) cos(b)*sin(c) cos(b)*cos(c) zf; 0 0 0 1];
+    
+%end
